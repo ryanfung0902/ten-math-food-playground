@@ -92,3 +92,83 @@ button,input { font:inherit }
 @media(prefers-reduced-motion:reduce) { .tenmath-basket.drag-over { transform:none; } }
 .basket-plate { width:calc(100% + 14px); margin:12px -7px 10px; }
 @media(max-width:700px) { .basket-plate { width:calc(100% + 12px); margin:10px -6px 8px; } }
+
+/* 手機橫向：食物留在左邊，兩隻碟並排，保留觸控和垂直捲動空間。 */
+@media (orientation:landscape) and (min-width:560px) and (max-width:1000px) and (max-height:600px) {
+  body { min-height:100svh; }
+  .playground-home {
+    min-height:100svh;
+    padding:16px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left));
+  }
+  .playground-card {
+    display:grid;
+    grid-template-columns:minmax(160px, .8fr) minmax(280px, 1.3fr);
+    align-items:center;
+    column-gap:24px;
+    width:min(880px,100%);
+    padding:20px;
+    border-radius:24px;
+  }
+  .playground-icons { font-size:38px; letter-spacing:4px; }
+  .playground-card h1 { grid-column:1; margin:4px 0; font-size:30px; }
+  .playground-mode-buttons { grid-column:2; grid-row:1 / 3; gap:14px; margin:0; }
+  .playground-mode { min-height:150px; padding:16px 8px; gap:8px; }
+  .playground-mode > span { width:48px; height:48px; font-size:36px; }
+  .playground-mode strong { font-size:20px; white-space:nowrap; }
+  .playground-mode small { font-size:13px; }
+  .tenmath-shell {
+    max-width:none;
+    margin:0;
+    min-height:100svh;
+    padding:8px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    border:0;
+    border-radius:0;
+  }
+  .tenmath-header {
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:8px;
+    padding:0;
+  }
+  .tenmath-back { position:static; grid-column:1; grid-row:1; min-height:44px; margin:0; padding:6px 9px; font-size:12px; }
+  .tenmath-switch { grid-column:3; grid-row:1; padding:0; gap:6px; }
+  .tenmath-switch button { min-height:44px; padding:6px 10px; border-radius:12px; font-size:14px; white-space:nowrap; }
+  .tenmath-header h1 { grid-column:2; grid-row:1; margin:0; font-size:20px; }
+  .tenmath-header p { display:none; }
+  .tenmath-equation { margin:6px 0 10px; padding:2px 8px; border-width:2px; border-radius:14px; font-size:36px; line-height:1.25; letter-spacing:0; box-shadow:0 3px #e7eee2; }
+  .tenmath-content { grid-template-columns:124px minmax(0,1fr); align-items:start; gap:10px; }
+  .tenmath-foods { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:8px 6px; padding:8px; border-radius:16px; }
+  .tenmath-foods h2 { grid-column:1 / -1; margin:0; font-size:15px; }
+  .tenmath-foods > p { grid-column:1 / -1; margin:0; font-size:12px; line-height:1.4; }
+  .drag-guide { grid-column:1 / -1; justify-content:center; margin:0; padding:4px 0; font-size:12px; }
+  .drag-guide span { font-size:20px; }
+  .tenmath-food { min-width:0; min-height:64px; flex-direction:column; justify-content:center; gap:2px; margin:0; padding:4px 2px; border-radius:10px; font-size:12px; }
+  .tenmath-food > span { width:32px; height:32px; font-size:26px; }
+  .tenmath-food small { display:none; }
+  .tenmath-work { min-width:0; padding:10px; border-radius:16px; }
+  .tenmath-baskets { grid-template-columns:minmax(0,1fr); justify-items:center; gap:6px; }
+  .tenmath-baskets.addition { grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr); align-items:stretch; gap:6px; }
+  .tenmath-basket { min-width:0; width:min(100%,340px); min-height:0; padding:8px; border-width:2px; border-radius:16px; }
+  .tenmath-basket.selected { box-shadow:0 0 0 2px #dcefdc; }
+  .basket-title { gap:6px; font-size:14px; }
+  .basket-title strong { font-size:26px; line-height:1.2; }
+  .basket-select { min-height:44px; }
+  .basket-plus { align-self:center; width:32px; height:32px; margin:0; font-size:27px; box-shadow:0 2px #f2d29e; }
+  .basket-plate { width:calc(100% + 12px); margin:0 -6px 2px; }
+  .basket-caption { font-size:14px; line-height:1.4; }
+  .basket-reset { min-height:44px; margin:4px auto 0; padding:5px 8px; font-size:12px; }
+  .removed-label { font-size:13px; overflow-wrap:anywhere; }
+  .tenmath-guide { margin:8px 0; padding:6px; font-size:14px; line-height:1.4; }
+  .tenmath-guide span { margin-right:3px; }
+  .tenmath-answer { gap:8px; }
+  .tenmath-answer label { font-size:16px; }
+  .tenmath-answer input { width:94px; min-height:44px; padding:4px; border-width:2px; border-radius:12px; font-size:20px; }
+  .tenmath-answer button { min-height:44px; padding:8px 12px; border-radius:12px; font-size:14px; }
+  .tenmath-actions { gap:6px; margin-top:8px; }
+  .tenmath-actions button { min-height:44px; padding:6px 8px; border-radius:12px; font-size:13px; }
+  .tenmath-feedback,.tenmath-hint { margin-top:8px; padding:8px; font-size:14px; }
+  .tenmath-footer { padding:8px 0 0; font-size:12px; }
+  .drag-ghost { font-size:40px; }
+  .drag-ghost i { font-size:26px; }
+}
