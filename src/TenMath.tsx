@@ -42,10 +42,13 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
     countAudioRef.current?.pause()
     countAudioRef.current = audio
     setVoiceMessage('')
-    void audio.play().catch(() => setVoiceMessage('配音未能播放，請再按一次食物。'))
+    void audio.play().catch(() => {
+      if (countAudioRef.current === audio) setVoiceMessage('配音未能播放，請再按一次食物。')
+    })
   }
   const switchVoiceTeacher = () => {
     countAudioRef.current?.pause()
+    countAudioRef.current = null
     setVoiceTeacher(current => current === 'ying-wah' ? 'wing-ting' : 'ying-wah')
     setVoiceMessage('')
   }
