@@ -19,6 +19,9 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
   const [hint, setHint] = useState(0)
   const [sound, setSound] = useState(true)
+  const [voiceEnabled, setVoiceEnabled] = useState(true)
+  const [voiceMessage, setVoiceMessage] = useState('')
+  const countAudioRef = useRef<HTMLAudioElement | null>(null)
   const [selected, setSelected] = useState(0)
   const [drag, setDrag] = useState<{ food: number; x: number; y: number; startX: number; startY: number; moved: boolean; overBasket: number | null } | null>(null)
   const dragRef = useRef<typeof drag>(null)
@@ -29,6 +32,15 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const equation = mode === 'add' ? `${question.a} ＋ ${question.b}` : `${question.a} − ${question.b}`
   const resetRound = () => { setFoodsChosen([null, null]); setCounts([0, 0]); setRemoved([]); setAnswer(''); setFeedback(null); setHint(0); setDragMessage(''); setSelected(0) }
   const makeNew = (nextMode = mode) => { setMode(nextMode); setQuestion(makeQuestion(nextMode)); setFoodsChosen([null, null]); setCounts([0, 0]); setRemoved([]); setAnswer(''); setFeedback(null); setHint(0); setDragMessage(''); setSelected(0) }
+  const playCount = (count: number) => {
+    if (!voiceEnabled || count < 1 || count > 10) return
+    const audio = new Audio(`${import.meta.env.BASE_URL}audio/count-${count}.wav`)
+    audio.volume = 0.85
+    countAudioRef.current?.pause()
+    countAudioRef.current = audio
+    setVoiceMessage('')
+    void audio.play().catch(() => setVoiceMessage('配音未能播放，請再按一次食物。'))
+  }
   const celebrate = () => {
     if (!sound) return
     try {
@@ -59,7 +71,11 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
     if (!amount || (foodsChosen[basket] !== null && foodsChosen[basket] !== food)) { setDragMessage(!amount ? '這個碟需要 0 件食物。' : '這個碟已選了另一款食物，請先重新選擇。'); return }
     if (mode === 'add') {
       if (counts[basket] >= amount) { setDragMessage('這個碟已經放滿了！'); return }
+      const nextCount = counts[basket] + 1
       setCounts(items => items.map((item, i) => i === basket ? item + 1 : item))
+      playCount(nextCount)
+    } else {
+      playCount(amount)
     }
     setFoodsChosen(items => items.map((item, i) => i === basket ? food : item))
     setSelected(basket)
@@ -70,7 +86,13 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const endDrag = (event: ReactPointerEvent<HTMLButtonElement>) => { const current = dragRef.current; if (!current) return; if (current.moved) { suppressClick.current = true; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-basket]'); if (target) updateFood(Number(target.dataset.basket), current.food); else setDragMessage('請把食物放到碟上。'); window.setTimeout(() => { suppressClick.current = false }, 250) } dragRef.current = null; setDrag(null) }
   const resetFood = (basket: number) => { setFoodsChosen(items => items.map((item, i) => i === basket ? null : item)); setCounts(items => items.map((item, i) => i === basket ? 0 : item)); if (mode === 'subtract') setRemoved([]); setSelected(basket); setFeedback(null) }
   const check = () => { if (!/^(10|[0-9])$/.test(answer)) return; if (Number(answer) === question.answer) { setFeedback('correct'); celebrate() } else setFeedback('wrong') }
-  const removeItem = (index: number) => { if (removed.length < question.b && !removed.includes(index)) setRemoved(value => [...value, index]) }
+  const removeItem = (index: number) => {
+    if (removed.length < question.b && !removed.includes(index)) {
+      const nextRemoved = removed.length + 1
+      setRemoved(value => [...value, index])
+      playCount(question.a - nextRemoved)
+    }
+  }
   const countedFood = foodsChosen[0] === null ? foods[0] : foods[foodsChosen[0]]
   return <main className="tenmath-shell">
     <header className="tenmath-header"><button className="tenmath-back" onClick={onBack}>← {backLabel}</button><div className="tenmath-switch"><button className={mode === 'add' ? 'active' : ''} onClick={() => makeNew('add')}>10以內加法</button><button className={mode === 'subtract' ? 'active' : ''} onClick={() => makeNew('subtract')}>10以內減法</button></div><h1>{mode === 'add' ? '加法' : '減法'}學校樂園</h1><p>揀喜歡的食物，一齊數一數！</p></header>
@@ -91,7 +113,7 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
       })}</div>
         <div className="tenmath-guide">{mode === 'add' ? <><span>⬇️</span> 先逐件放滿兩個碟，再合起來數一數！</> : <><span>👆</span> 按一按要拿走的食物，再數剩低幾多個！</>}</div><div className="tenmath-answer"><label htmlFor="tenmath-answer">我的答案</label><input id="tenmath-answer" inputMode="numeric" maxLength={2} value={answer} onChange={e => { setAnswer(e.target.value.replace(/\D/g, '').slice(0, 2)); setFeedback(null) }} placeholder="輸入答案" aria-label="輸入0至10的答案"/><button onClick={check} disabled={!ready || !/^(10|[0-9])$/.test(answer) || feedback === 'correct'}>檢查答案</button></div>
         {feedback && <p className={'tenmath-feedback ' + feedback} role="status">{feedback === 'correct' ? '答啱喇！做得好！ 🎉' : '再數一次，慢慢試！'}</p>}
-        <div className="tenmath-actions"><button onClick={() => setHint(n => Math.min(n + 1, 2))}>💡 提示</button><button onClick={() => setSound(!sound)} aria-pressed={sound}>{sound ? '🔊 掌聲開' : '🔇 掌聲關'}</button><button onClick={resetRound}>↻ 重做本題</button>{feedback === 'correct' && <button className="next" onClick={() => makeNew()}>下一題 →</button>}</div>{hint > 0 && <p className="tenmath-hint" role="status">{mode === 'add' ? hint === 1 ? '由第一個碟開始，逐個數到第二個碟。' : `可以由 ${question.a} 開始，再向前數 ${question.b} 個。` : hint === 1 ? `原有 ${question.a} 個，拿走 ${question.b} 個。` : `原有 ${question.a} 個，已拿走 ${removed.length} 個；數一數碟上還有幾多個。`}</p>}
+        <div className="tenmath-actions"><button onClick={() => setHint(n => Math.min(n + 1, 2))}>💡 提示</button><button onClick={() => setSound(!sound)} aria-pressed={sound}>{sound ? '🔊 掌聲開' : '🔇 掌聲關'}</button><button onClick={() => setVoiceEnabled(value => !value)} aria-pressed={voiceEnabled}>{voiceEnabled ? '🗣️ 數數聲開' : '🔇 數數聲關'}</button><button onClick={resetRound}>↻ 重做本題</button>{feedback === 'correct' && <button className="next" onClick={() => makeNew()}>下一題 →</button>}</div>{voiceMessage && <p className="tenmath-hint" role="status">{voiceMessage}</p>}{hint > 0 && <p className="tenmath-hint" role="status">{mode === 'add' ? hint === 1 ? '由第一個碟開始，逐個數到第二個碟。' : `可以由 ${question.a} 開始，再向前數 ${question.b} 個。` : hint === 1 ? `原有 ${question.a} 個，拿走 ${question.b} 個。` : `原有 ${question.a} 個，已拿走 ${removed.length} 個；數一數碟上還有幾多個。`}</p>}
       </section></div><footer className="tenmath-footer">慢慢數，答啱就有掌聲！</footer>
   </main>
 }
