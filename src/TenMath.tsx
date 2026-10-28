@@ -1,8 +1,9 @@
-import { Fragment, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 
 type Mode = 'add' | 'subtract'
 const foods = [{ icon: '🍎', name: '蘋果' }, { icon: '🍌', name: '香蕉' }, { icon: '🍓', name: '草莓' }, { icon: '🍪', name: '餅乾' }, { icon: '🍊', name: '橙' }, { icon: '🧁', name: '蛋糕' }]
+const countAudioUrl = (count: number) => `${import.meta.env.BASE_URL}audio/ying-wah/count-${count}.wav?v=20261028c`
 
 function makeQuestion(mode: Mode) {
   if (mode === 'add') { const a = Math.floor(Math.random() * 10) + 1; const b = Math.floor(Math.random() * (11 - a)); return { a, b, answer: a + b } }
@@ -23,11 +24,27 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const [voiceEnabled, setVoiceEnabled] = useState(true)
   const [voiceMessage, setVoiceMessage] = useState('')
   const countAudioRef = useRef<HTMLAudioElement | null>(null)
+  const countAudioCacheRef = useRef<Map<number, HTMLAudioElement>>(new Map())
   const [selected, setSelected] = useState(0)
   const [drag, setDrag] = useState<{ food: number; x: number; y: number; startX: number; startY: number; moved: boolean; overBasket: number | null } | null>(null)
   const dragRef = useRef<typeof drag>(null)
   const suppressClick = useRef(false)
   const [dragMessage, setDragMessage] = useState('')
+
+  useEffect(() => {
+    const clips = new Map<number, HTMLAudioElement>()
+    for (let count = 1; count <= 10; count++) {
+      const audio = new Audio(countAudioUrl(count))
+      audio.preload = 'auto'
+      audio.load()
+      clips.set(count, audio)
+    }
+    countAudioCacheRef.current = clips
+    return () => {
+      clips.forEach(audio => audio.pause())
+      countAudioCacheRef.current.clear()
+    }
+  }, [])
 
   const ready = mode === 'add' ? counts[0] === question.a && counts[1] === question.b : foodsChosen[0] !== null && removed.length === question.b
   const equation = mode === 'add' ? `${question.a} ＋ ${question.b}` : `${question.a} − ${question.b}`
@@ -35,9 +52,10 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const makeNew = (nextMode = mode) => { setMode(nextMode); setQuestion(makeQuestion(nextMode)); setFoodsChosen([null, null]); setCounts([0, 0]); setBasketHints([false, false]); setRemoved([]); setAnswer(''); setFeedback(null); setHint(0); setDragMessage(''); setSelected(0) }
   const playCount = (count: number) => {
     if (!voiceEnabled || count < 1 || count > 10) return
-    const audio = new Audio(`${import.meta.env.BASE_URL}audio/ying-wah/count-${count}.wav?v=20261028b`)
+    const audio = countAudioCacheRef.current.get(count) ?? new Audio(countAudioUrl(count))
     audio.volume = 0.85
     countAudioRef.current?.pause()
+    audio.currentTime = 0
     countAudioRef.current = audio
     setVoiceMessage('')
     void audio.play().catch(() => {
