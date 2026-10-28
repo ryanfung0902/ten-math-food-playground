@@ -36,6 +36,11 @@ button,input { font:inherit }
 .basket-reset { display:block; margin:8px auto 0; padding:6px 10px; border:1px solid #cbd9cc; border-radius:10px; background:#fff; color:#526d58; font-size:13px; font-weight:800; cursor:pointer; }
 .tenmath-guide { margin:16px 0; padding:12px; border-radius:14px; background:#fff5d9; color:#795f24; text-align:center; font-size:18px; font-weight:900; }.tenmath-guide span { margin-right:8px; }
 .tenmath-answer { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; }.tenmath-answer label { font-size:19px; font-weight:900; }.tenmath-answer input { width:90px; padding:8px; border:3px solid #d5e3d5; border-radius:14px; text-align:center; font-size:32px; font-weight:900; }.tenmath-answer button { padding:13px 20px; border:0; border-radius:14px; font-size:17px; font-weight:900; cursor:pointer; }.tenmath-answer button:disabled { opacity:.55; cursor:not-allowed; }
+.tenmath-keypad { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; width:min(100%,300px); margin:12px auto 0; }
+.tenmath-keypad button { min-height:56px; border:2px solid #d2dfcf; border-radius:14px; background:#fffdf7; color:#315c43; font-size:25px; font-weight:900; cursor:pointer; touch-action:manipulation; box-shadow:0 3px #d5e3d5; }
+.tenmath-keypad button:active { transform:translateY(2px); box-shadow:0 1px #d5e3d5; }
+.tenmath-keypad .keypad-action { background:#eef6ec; font-size:17px; }
+.tenmath-keypad button:focus-visible { outline:3px solid #579875; outline-offset:2px; }
 .tenmath-feedback,.tenmath-hint { margin:14px 0 0; padding:12px; border-radius:14px; text-align:center; font-weight:900; }.tenmath-feedback.correct { background:#e5f7e8; color:#39734b; font-size:21px; }.tenmath-feedback.wrong,.tenmath-hint { background:#fff5d9; color:#785d24; }.tenmath-actions { display:flex; justify-content:center; flex-wrap:wrap; gap:9px; margin-top:16px; }.tenmath-actions button { font-size:15px; }.tenmath-actions .next { border-color:#619774; }.tenmath-footer { padding:18px 0 4px; color:#879087; text-align:center; }
 .tenmath-voice-note { margin:8px 0 0; text-align:center; color:#604381; font-size:14px; font-weight:700; }
 .tenmath-launch { margin-top:14px; padding:12px 18px; border:0; border-radius:14px; background:#639879; color:#fff; font-size:17px; font-weight:900; cursor:pointer; }
@@ -170,6 +175,9 @@ button,input { font:inherit }
   .tenmath-answer label { font-size:16px; }
   .tenmath-answer input { width:94px; min-height:44px; padding:4px; border-width:2px; border-radius:12px; font-size:20px; }
   .tenmath-answer button { min-height:44px; padding:8px 12px; border-radius:12px; font-size:14px; }
+  .tenmath-keypad { gap:6px; width:min(100%,260px); margin-top:9px; }
+  .tenmath-keypad button { min-height:48px; font-size:21px; }
+  .tenmath-keypad .keypad-action { font-size:15px; }
   .tenmath-actions { gap:6px; margin-top:8px; }
   .tenmath-actions button { min-height:44px; padding:6px 8px; border-radius:12px; font-size:13px; }
   .tenmath-feedback,.tenmath-hint { margin-top:8px; padding:8px; font-size:14px; }
