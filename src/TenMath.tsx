@@ -15,6 +15,7 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const [foodsChosen, setFoodsChosen] = useState<(number | null)[]>([null, null])
   const [removed, setRemoved] = useState<number[]>([])
   const [counts, setCounts] = useState([0, 0])
+  const [basketHints, setBasketHints] = useState([false, false])
   const [answer, setAnswer] = useState('')
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
   const [hint, setHint] = useState(0)
@@ -30,8 +31,8 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
 
   const ready = mode === 'add' ? counts[0] === question.a && counts[1] === question.b : foodsChosen[0] !== null && removed.length === question.b
   const equation = mode === 'add' ? `${question.a} ＋ ${question.b}` : `${question.a} − ${question.b}`
-  const resetRound = () => { setFoodsChosen([null, null]); setCounts([0, 0]); setRemoved([]); setAnswer(''); setFeedback(null); setHint(0); setDragMessage(''); setSelected(0) }
-  const makeNew = (nextMode = mode) => { setMode(nextMode); setQuestion(makeQuestion(nextMode)); setFoodsChosen([null, null]); setCounts([0, 0]); setRemoved([]); setAnswer(''); setFeedback(null); setHint(0); setDragMessage(''); setSelected(0) }
+  const resetRound = () => { setFoodsChosen([null, null]); setCounts([0, 0]); setBasketHints([false, false]); setRemoved([]); setAnswer(''); setFeedback(null); setHint(0); setDragMessage(''); setSelected(0) }
+  const makeNew = (nextMode = mode) => { setMode(nextMode); setQuestion(makeQuestion(nextMode)); setFoodsChosen([null, null]); setCounts([0, 0]); setBasketHints([false, false]); setRemoved([]); setAnswer(''); setFeedback(null); setHint(0); setDragMessage(''); setSelected(0) }
   const playCount = (count: number) => {
     if (!voiceEnabled || count < 1 || count > 10) return
     if (count > 3) { setVoiceMessage('四至十的配音待重新錄製，稍後補上。'); return }
@@ -87,7 +88,7 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const startDrag = (event: ReactPointerEvent<HTMLButtonElement>, food: number) => { if (event.button !== 0) return; event.currentTarget.setPointerCapture(event.pointerId); const next = { food, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false, overBasket: null }; dragRef.current = next; setDrag(next) }
   const moveDrag = (event: ReactPointerEvent<HTMLButtonElement>) => { const current = dragRef.current; if (!current) return; const over = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-basket]'); const next = { ...current, x: event.clientX, y: event.clientY, moved: current.moved || Math.hypot(event.clientX - current.startX, event.clientY - current.startY) > 8, overBasket: over ? Number(over.dataset.basket) : null }; dragRef.current = next; setDrag(next) }
   const endDrag = (event: ReactPointerEvent<HTMLButtonElement>) => { const current = dragRef.current; if (!current) return; if (current.moved) { suppressClick.current = true; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-basket]'); if (target) updateFood(Number(target.dataset.basket), current.food); else setDragMessage('請把食物放到碟上。'); window.setTimeout(() => { suppressClick.current = false }, 250) } dragRef.current = null; setDrag(null) }
-  const resetFood = (basket: number) => { setFoodsChosen(items => items.map((item, i) => i === basket ? null : item)); setCounts(items => items.map((item, i) => i === basket ? 0 : item)); if (mode === 'subtract') setRemoved([]); setSelected(basket); setFeedback(null) }
+  const resetFood = (basket: number) => { setFoodsChosen(items => items.map((item, i) => i === basket ? null : item)); setCounts(items => items.map((item, i) => i === basket ? 0 : item)); setBasketHints(items => items.map((item, i) => i === basket ? false : item)); if (mode === 'subtract') setRemoved([]); setSelected(basket); setFeedback(null) }
   const check = () => { if (!/^(10|[0-9])$/.test(answer)) return; if (Number(answer) === question.answer) { setFeedback('correct'); celebrate() } else setFeedback('wrong') }
   const removeItem = (index: number) => {
     if (removed.length < question.b && !removed.includes(index)) {
@@ -108,8 +109,10 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
         const count = mode === 'add' ? counts[basket] : foodIndex === null ? 0 : amount
         return <Fragment key={basket}>{basket === 1 && <div className="basket-plus" aria-label="加">＋</div>}<div className={'tenmath-basket ' + (selected === basket ? 'selected ' : '') + (drag?.overBasket === basket && drag.moved ? 'drag-over' : '')} onClick={() => setSelected(basket)} data-basket={basket} role="group" aria-label={`${basket === 0 ? '第一個' : '第二個'}數字 ${amount} 的碟`}>
           <div className="basket-title"><button className="basket-select" onClick={() => setSelected(basket)}>{mode === 'subtract' ? '原有' : basket === 0 ? '第一個數' : '第二個數'}</button><strong>{amount}</strong></div>
-          <div className="basket-plate"><div className="basket-items">{Array.from({ length: count }, (_, i) => mode === 'subtract' ? <button key={i} aria-label={removed.includes(i) ? '已拿走' : '拿走這件食物'} className={removed.includes(i) ? 'taken' : ''} onClick={(event) => { event.stopPropagation(); removeItem(i) }} disabled={removed.includes(i) || removed.length >= question.b}>{foods[foodIndex!].icon}</button> : <span key={i} className="basket-fruit">{foods[foodIndex!].icon}</span>)}{count === 0 && <span className="basket-empty">{amount === 0 ? '空碟，0 件' : '食物放喺呢度'}</span>}</div></div>
+          <div className="basket-plate"><div className="basket-items">{Array.from({ length: count }, (_, i) => mode === 'subtract' ? <button key={i} aria-label={removed.includes(i) ? '已拿走' : '拿走這件食物'} className={removed.includes(i) ? 'taken' : ''} onClick={(event) => { event.stopPropagation(); removeItem(i) }} disabled={removed.includes(i) || removed.length >= question.b}>{foods[foodIndex!].icon}</button> : <span key={i} className="basket-fruit">{foods[foodIndex!].icon}</span>)}{basketHints[basket] && foodIndex !== null && mode === 'add' && Array.from({ length: Math.max(0, amount - count) }, (_, i) => <span key={`hint-${i}`} className="basket-fruit basket-fruit-ghost" aria-hidden="true">{foods[foodIndex].icon}</span>)}{count === 0 && <span className="basket-empty">{amount === 0 ? '空碟，0 件' : '食物放喺呢度'}</span>}</div></div>
           <div className="basket-caption">{mode === 'add' ? `已放 ${count} / ${amount} 件${count === amount ? ' ✓' : ''}` : foodIndex === null ? '請先揀食物' : foods[foodIndex].name}</div>
+          {mode === 'add' && <button className="basket-hint" aria-pressed={basketHints[basket]} onClick={(event) => { event.stopPropagation(); setBasketHints(items => items.map((item, i) => i === basket ? !item : item)) }}>{basketHints[basket] ? '🙈 隱藏水果影子' : '💡 顯示水果影子'}</button>}
+          {basketHints[basket] && foodIndex === null && <div className="basket-hint-help" role="status">先選一款水果，就會出現影子。</div>}
           {foodIndex !== null && <button className="basket-reset" onClick={(event) => { event.stopPropagation(); resetFood(basket) }}>重新選擇食物</button>}
           {basket === 0 && mode === 'subtract' && <div className="removed-label">拿走區：{Array.from({ length: removed.length }, () => countedFood.icon).join(' ') || '按物件拿走'}</div>}
         </div></Fragment>
