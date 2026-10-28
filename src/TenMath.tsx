@@ -2,8 +2,10 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 
 type Mode = 'add' | 'subtract'
+type FeedbackKind = 'correct' | 'wrong'
 const foods = [{ icon: '🍎', name: '蘋果' }, { icon: '🍌', name: '香蕉' }, { icon: '🍓', name: '草莓' }, { icon: '🍪', name: '餅乾' }, { icon: '🍊', name: '橙' }, { icon: '🧁', name: '蛋糕' }]
 const countAudioUrl = (count: number) => `${import.meta.env.BASE_URL}audio/ying-wah/count-${count}.wav?v=20261028c`
+const feedbackAudioUrl = (kind: FeedbackKind) => `${import.meta.env.BASE_URL}audio/ying-wah/feedback-${kind}.wav?v=20261028`
 
 function makeQuestion(mode: Mode) {
   if (mode === 'add') { const a = Math.floor(Math.random() * 10) + 1; const b = Math.floor(Math.random() * (11 - a)); return { a, b, answer: a + b } }
@@ -18,10 +20,12 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const [counts, setCounts] = useState([0, 0])
   const [basketHints, setBasketHints] = useState([false, false])
   const [answer, setAnswer] = useState('')
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
+  const [feedback, setFeedback] = useState<FeedbackKind | null>(null)
   const [voiceMessage, setVoiceMessage] = useState('')
   const countAudioRef = useRef<HTMLAudioElement | null>(null)
   const countAudioCacheRef = useRef<Map<number, HTMLAudioElement>>(new Map())
+  const feedbackAudioCacheRef = useRef<Partial<Record<FeedbackKind, HTMLAudioElement>>>({})
+  const activeFeedbackAudioRef = useRef<HTMLAudioElement | null>(null)
   const [selected, setSelected] = useState(0)
   const [drag, setDrag] = useState<{ food: number; x: number; y: number; startX: number; startY: number; moved: boolean; overBasket: number | null } | null>(null)
   const dragRef = useRef<typeof drag>(null)
@@ -37,20 +41,31 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
       clips.set(count, audio)
     }
     countAudioCacheRef.current = clips
+    const feedbackClips: Partial<Record<FeedbackKind, HTMLAudioElement>> = {}
+    for (const kind of ['correct', 'wrong'] as const) {
+      const audio = new Audio(feedbackAudioUrl(kind))
+      audio.preload = 'auto'
+      audio.load()
+      feedbackClips[kind] = audio
+    }
+    feedbackAudioCacheRef.current = feedbackClips
     return () => {
       clips.forEach(audio => audio.pause())
+      Object.values(feedbackClips).forEach(audio => audio?.pause())
       countAudioCacheRef.current.clear()
+      feedbackAudioCacheRef.current = {}
     }
   }, [])
 
   const ready = mode === 'add' ? counts[0] === question.a && counts[1] === question.b : foodsChosen[0] !== null && removed.length === question.b
   const equation = mode === 'add' ? `${question.a} ＋ ${question.b}` : `${question.a} − ${question.b}`
-  const resetRound = () => { setFoodsChosen([null, null]); setCounts([0, 0]); setBasketHints([false, false]); setRemoved([]); setAnswer(''); setFeedback(null); setDragMessage(''); setSelected(0) }
-  const makeNew = (nextMode = mode) => { setMode(nextMode); setQuestion(makeQuestion(nextMode)); setFoodsChosen([null, null]); setCounts([0, 0]); setBasketHints([false, false]); setRemoved([]); setAnswer(''); setFeedback(null); setDragMessage(''); setSelected(0) }
+  const resetRound = () => { activeFeedbackAudioRef.current?.pause(); setFoodsChosen([null, null]); setCounts([0, 0]); setBasketHints([false, false]); setRemoved([]); setAnswer(''); setFeedback(null); setDragMessage(''); setSelected(0) }
+  const makeNew = (nextMode = mode) => { activeFeedbackAudioRef.current?.pause(); setMode(nextMode); setQuestion(makeQuestion(nextMode)); setFoodsChosen([null, null]); setCounts([0, 0]); setBasketHints([false, false]); setRemoved([]); setAnswer(''); setFeedback(null); setDragMessage(''); setSelected(0) }
   const playCount = (count: number) => {
     if (count < 1 || count > 10) return
     const audio = countAudioCacheRef.current.get(count) ?? new Audio(countAudioUrl(count))
     audio.volume = 0.85
+    activeFeedbackAudioRef.current?.pause()
     countAudioRef.current?.pause()
     audio.currentTime = 0
     countAudioRef.current = audio
@@ -59,29 +74,16 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
       if (countAudioRef.current === audio) setVoiceMessage('配音未能播放，請再按一次食物。')
     })
   }
-  const celebrate = () => {
-    try {
-      const context = new AudioContext()
-      for (let clap = 0; clap < 18; clap++) {
-        const duration = .075
-        const buffer = context.createBuffer(1, Math.floor(context.sampleRate * duration), context.sampleRate)
-        const samples = buffer.getChannelData(0)
-        for (let i = 0; i < samples.length; i++) samples[i] = (Math.random() * 2 - 1) * (1 - i / samples.length)
-        const source = context.createBufferSource()
-        const filter = context.createBiquadFilter()
-        const gain = context.createGain()
-        const start = context.currentTime + clap * (.075 + Math.random() * .035)
-        source.buffer = buffer
-        filter.type = 'highpass'
-        filter.frequency.value = 850
-        gain.gain.setValueAtTime(.0001, start)
-        gain.gain.exponentialRampToValueAtTime(.14, start + .006)
-        gain.gain.exponentialRampToValueAtTime(.0001, start + duration)
-        source.connect(filter).connect(gain).connect(context.destination)
-        source.start(start)
-      }
-      window.setTimeout(() => void context.close(), 2200)
-    } catch { /* audio may be unavailable */ }
+  const playFeedback = (kind: FeedbackKind) => {
+    const audio = feedbackAudioCacheRef.current[kind] ?? new Audio(feedbackAudioUrl(kind))
+    countAudioRef.current?.pause()
+    activeFeedbackAudioRef.current?.pause()
+    audio.currentTime = 0
+    activeFeedbackAudioRef.current = audio
+    setVoiceMessage('')
+    void audio.play().catch(() => {
+      if (activeFeedbackAudioRef.current === audio) setVoiceMessage('老師回應錄音未能播放。')
+    })
   }
   const updateFood = (basket: number, food: number) => {
     const amount = basket === 0 ? question.a : question.b
@@ -104,9 +106,9 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const resetFood = () => { setFoodsChosen([null, null]); setCounts([0, 0]); setBasketHints([false, false]); setRemoved([]); setAnswer(''); setSelected(0); setFeedback(null); setDragMessage('') }
   const updateAnswer = (value: string) => {
     const next = value.replace(/\D/g, '').slice(0, 2)
-    if (next === '' || /^(10|[0-9])$/.test(next)) { setAnswer(next); setFeedback(null) }
+    if (next === '' || /^(10|[0-9])$/.test(next)) { activeFeedbackAudioRef.current?.pause(); setAnswer(next); setFeedback(null) }
   }
-  const check = () => { if (!/^(10|[0-9])$/.test(answer)) return; if (Number(answer) === question.answer) { setFeedback('correct'); celebrate() } else setFeedback('wrong') }
+  const check = () => { if (!/^(10|[0-9])$/.test(answer)) return; const result = Number(answer) === question.answer ? 'correct' : 'wrong'; setFeedback(result); playFeedback(result) }
   const removeItem = (index: number) => {
     if (removed.length < question.b && !removed.includes(index)) {
       const nextRemoved = removed.length + 1
@@ -138,6 +140,6 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
         <div className="tenmath-keypad" role="group" aria-label="數字鍵盤">{[1, 2, 3, 4, 5, 6, 7, 8, 9].map(digit => <button key={digit} type="button" onClick={() => updateAnswer(answer + digit)}>{digit}</button>)}<button type="button" className="keypad-action" onClick={() => updateAnswer('')}>清除</button><button type="button" onClick={() => updateAnswer(answer + '0')}>0</button><button type="button" className="keypad-action" aria-label="刪除最後一個數字" onClick={() => updateAnswer(answer.slice(0, -1))}>⌫</button></div>
         {feedback && <p className={'tenmath-feedback ' + feedback} role="status">{feedback === 'correct' ? '答啱喇！做得好！ 🎉' : '再數一次，慢慢試！'}</p>}
         <div className="tenmath-actions"><button onClick={resetRound}>↻ 重做本題</button>{feedback === 'correct' && <button className="next" onClick={() => makeNew()}>下一題 →</button>}</div>{voiceMessage && <p className="tenmath-hint" role="status">{voiceMessage}</p>}
-      </section></div><footer className="tenmath-footer">慢慢數，答啱就有掌聲！</footer>
+      </section></div><footer className="tenmath-footer">慢慢數，答完有陳老師回應！</footer>
   </main>
 }
