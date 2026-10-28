@@ -35,7 +35,7 @@ export default function TenMath({ onBack, backLabel = '返回數學小助手', i
   const makeNew = (nextMode = mode) => { setMode(nextMode); setQuestion(makeQuestion(nextMode)); setFoodsChosen([null, null]); setCounts([0, 0]); setBasketHints([false, false]); setRemoved([]); setAnswer(''); setFeedback(null); setHint(0); setDragMessage(''); setSelected(0) }
   const playCount = (count: number) => {
     if (!voiceEnabled || count < 1 || count > 10) return
-    const audio = new Audio(`${import.meta.env.BASE_URL}audio/ying-wah/count-${count}.wav`)
+    const audio = new Audio(`${import.meta.env.BASE_URL}audio/ying-wah/count-${count}.wav?v=20261028`)
     audio.volume = 0.85
     countAudioRef.current?.pause()
     countAudioRef.current = audio
